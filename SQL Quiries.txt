@@ -1,0 +1,399 @@
+-- ============================================
+-- OLIST E-COMMERCE PROJECT
+-- SQL BUSINESS ANALYSIS QUERIES
+-- PostgreSQL
+-- ============================================
+
+
+-- 1. TOTAL REVENUE
+SELECT
+    SUM(oi.price) AS total_revenue
+FROM orderitems oi;
+
+
+-- 2. TOTAL ORDERS
+SELECT
+    COUNT(DISTINCT order_id) AS total_orders
+FROM orders;
+
+
+-- 3. AVERAGE ORDER VALUE (AOV)
+SELECT
+    SUM(oi.price) / COUNT(DISTINCT oi.order_id) AS average_order_value
+FROM orderitems oi;
+
+
+-- 4. TOTAL PROFIT
+-- Use this only if a cost column exists in the dataset.
+SELECT
+    SUM(oi.price - oi.cost) AS total_profit
+FROM orderitems oi;
+
+
+-- 5. PROFIT MARGIN
+SELECT
+    SUM(oi.price - oi.cost) / NULLIF(SUM(oi.price), 0) * 100
+        AS profit_margin_percentage
+FROM orderitems oi;
+
+
+-- 6. ORDERS BY STATUS
+SELECT
+    order_status,
+    COUNT(*) AS order_count
+FROM orders
+GROUP BY order_status
+ORDER BY order_count DESC;
+
+
+-- 7. TOP 10 CUSTOMERS BY REVENUE
+SELECT
+    o.customer_id,
+    SUM(oi.price) AS revenue
+FROM orders o
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY o.customer_id
+ORDER BY revenue DESC
+LIMIT 10;
+
+
+-- 8. TOP 10 PRODUCTS BY REVENUE
+SELECT
+    oi.product_id,
+    SUM(oi.price) AS revenue
+FROM orderitems oi
+GROUP BY oi.product_id
+ORDER BY revenue DESC
+LIMIT 10;
+
+
+-- 9. REVENUE BY PRODUCT CATEGORY
+SELECT
+    p.product_category_name,
+    SUM(oi.price) AS revenue
+FROM orderitems oi
+JOIN products p
+    ON oi.product_id = p.product_id
+GROUP BY p.product_category_name
+ORDER BY revenue DESC;
+
+
+-- 10. REVENUE BY CUSTOMER STATE
+SELECT
+    c.customer_state,
+    SUM(oi.price) AS revenue
+FROM orders o
+JOIN customers c
+    ON o.customer_id = c.customer_id
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY c.customer_state
+ORDER BY revenue DESC;
+
+
+-- 11. PAYMENT TYPE ANALYSIS
+SELECT
+    payment_type,
+    COUNT(*) AS payment_count,
+    SUM(payment_value) AS total_payment
+FROM orderpayment
+GROUP BY payment_type
+ORDER BY total_payment DESC;
+
+
+-- 12. AVERAGE REVIEW SCORE
+SELECT
+    AVG(review_score) AS average_review_score
+FROM orderreviews;
+
+
+-- 13. REVENUE BY MONTH
+SELECT
+    DATE_TRUNC(
+        'month',
+        o.order_purchase_timestamp
+    ) AS month,
+    SUM(oi.price) AS revenue
+FROM orders o
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY month
+ORDER BY month;
+
+
+-- 14. MONTHLY ORDER COUNT
+SELECT
+    DATE_TRUNC(
+        'month',
+        order_purchase_timestamp
+    ) AS month,
+    COUNT(DISTINCT order_id) AS total_orders
+FROM orders
+GROUP BY month
+ORDER BY month;
+
+
+-- 15. AVERAGE ORDER VALUE BY MONTH
+SELECT
+    DATE_TRUNC(
+        'month',
+        o.order_purchase_timestamp
+    ) AS month,
+    SUM(oi.price)
+        / NULLIF(COUNT(DISTINCT o.order_id), 0)
+        AS average_order_value
+FROM orders o
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY month
+ORDER BY month;
+
+
+-- 16. TOP 10 SELLERS BY REVENUE
+SELECT
+    oi.seller_id,
+    SUM(oi.price) AS revenue
+FROM orderitems oi
+GROUP BY oi.seller_id
+ORDER BY revenue DESC
+LIMIT 10;
+
+
+-- 17. REVENUE BY PAYMENT TYPE
+SELECT
+    op.payment_type,
+    SUM(op.payment_value) AS total_payment
+FROM orderpayment op
+GROUP BY op.payment_type
+ORDER BY total_payment DESC;
+
+
+-- 18. REVIEW SCORE DISTRIBUTION
+SELECT
+    review_score,
+    COUNT(*) AS review_count
+FROM orderreviews
+GROUP BY review_score
+ORDER BY review_score;
+
+
+-- 19. AVERAGE FREIGHT VALUE
+SELECT
+    AVG(freight_value) AS average_freight_value
+FROM orderitems;
+
+
+-- 20. TOTAL FREIGHT VALUE
+SELECT
+    SUM(freight_value) AS total_freight_value
+FROM orderitems;
+
+
+-- 21. REVENUE + FREIGHT BY PRODUCT
+SELECT
+    oi.product_id,
+    SUM(oi.price) AS product_revenue,
+    SUM(oi.freight_value) AS total_freight
+FROM orderitems oi
+GROUP BY oi.product_id
+ORDER BY product_revenue DESC;
+
+
+-- 22. CUSTOMER ORDER COUNT
+SELECT
+    o.customer_id,
+    COUNT(DISTINCT o.order_id) AS order_count
+FROM orders o
+GROUP BY o.customer_id
+ORDER BY order_count DESC;
+
+
+-- 23. REPEAT CUSTOMERS
+SELECT
+    o.customer_id,
+    COUNT(DISTINCT o.order_id) AS order_count
+FROM orders o
+GROUP BY o.customer_id
+HAVING COUNT(DISTINCT o.order_id) > 1
+ORDER BY order_count DESC;
+
+
+-- 24. DELIVERED ORDERS
+SELECT
+    COUNT(*) AS delivered_orders
+FROM orders
+WHERE order_status = 'delivered';
+
+
+-- 25. CANCELED ORDERS
+SELECT
+    COUNT(*) AS canceled_orders
+FROM orders
+WHERE order_status = 'canceled';
+
+
+-- 26. DELIVERY TIME
+SELECT
+    order_id,
+    order_delivered_customer_date
+        - order_purchase_timestamp AS delivery_time
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL;
+
+
+-- 27. AVERAGE DELIVERY TIME
+SELECT
+    AVG(
+        order_delivered_customer_date
+        - order_purchase_timestamp
+    ) AS average_delivery_time
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL;
+
+
+-- 28. ESTIMATED VS ACTUAL DELIVERY
+SELECT
+    order_id,
+    order_delivered_customer_date,
+    order_estimated_delivery_date,
+    order_delivered_customer_date
+        - order_estimated_delivery_date AS delivery_difference
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL;
+
+
+-- 29. ORDERS DELIVERED LATE
+SELECT
+    COUNT(*) AS late_orders
+FROM orders
+WHERE order_delivered_customer_date >
+      order_estimated_delivery_date;
+
+
+-- 30. ORDERS DELIVERED ON TIME
+SELECT
+    COUNT(*) AS on_time_orders
+FROM orders
+WHERE order_delivered_customer_date <=
+      order_estimated_delivery_date;
+
+
+-- 31. REVENUE BY CUSTOMER CITY
+SELECT
+    c.customer_city,
+    SUM(oi.price) AS revenue
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY c.customer_city
+ORDER BY revenue DESC
+LIMIT 10;
+
+
+-- 32. REVENUE BY SELLER STATE
+SELECT
+    s.seller_state,
+    SUM(oi.price) AS revenue
+FROM sellers s
+JOIN orderitems oi
+    ON s.seller_id = oi.seller_id
+GROUP BY s.seller_state
+ORDER BY revenue DESC;
+
+
+-- 33. PRODUCT CATEGORY ORDER COUNT
+SELECT
+    p.product_category_name,
+    COUNT(DISTINCT oi.order_id) AS order_count
+FROM products p
+JOIN orderitems oi
+    ON p.product_id = oi.product_id
+GROUP BY p.product_category_name
+ORDER BY order_count DESC;
+
+
+-- 34. PRODUCT CATEGORY AVERAGE PRICE
+SELECT
+    p.product_category_name,
+    AVG(oi.price) AS average_price
+FROM products p
+JOIN orderitems oi
+    ON p.product_id = oi.product_id
+GROUP BY p.product_category_name
+ORDER BY average_price DESC;
+
+
+-- 35. CUSTOMER LIFETIME REVENUE
+SELECT
+    o.customer_id,
+    SUM(oi.price) AS lifetime_revenue
+FROM orders o
+JOIN orderitems oi
+    ON o.order_id = oi.order_id
+GROUP BY o.customer_id
+ORDER BY lifetime_revenue DESC;
+
+
+-- 36. DATA QUALITY: ORDERS WITHOUT ORDER ITEMS
+SELECT
+    o.order_id
+FROM orders o
+LEFT JOIN orderitems oi
+    ON o.order_id = oi.order_id
+WHERE oi.order_id IS NULL;
+
+
+-- 37. DATA QUALITY: ORPHAN ORDER ITEMS
+SELECT
+    oi.order_id
+FROM orderitems oi
+LEFT JOIN orders o
+    ON oi.order_id = o.order_id
+WHERE o.order_id IS NULL;
+
+
+-- 38. DATA QUALITY: ORPHAN PRODUCTS
+SELECT
+    oi.product_id
+FROM orderitems oi
+LEFT JOIN products p
+    ON oi.product_id = p.product_id
+WHERE p.product_id IS NULL;
+
+
+-- 39. DATA QUALITY: ORPHAN SELLERS
+SELECT
+    oi.seller_id
+FROM orderitems oi
+LEFT JOIN sellers s
+    ON oi.seller_id = s.seller_id
+WHERE s.seller_id IS NULL;
+
+
+-- 40. NULL CHECK — ORDERS
+SELECT
+    COUNT(*) FILTER (WHERE order_approved_at IS NULL)
+        AS missing_approved_date,
+    COUNT(*) FILTER (WHERE order_delivered_carrier_date IS NULL)
+        AS missing_carrier_date,
+    COUNT(*) FILTER (WHERE order_delivered_customer_date IS NULL)
+        AS missing_delivery_date
+FROM orders;
+
+
+-- 41. NULL CHECK — PRODUCTS
+SELECT
+    COUNT(*) FILTER (WHERE product_category_name IS NULL)
+        AS missing_category,
+    COUNT(*) FILTER (WHERE product_weight_g IS NULL)
+        AS missing_weight,
+    COUNT(*) FILTER (WHERE product_length_cm IS NULL)
+        AS missing_length,
+    COUNT(*) FILTER (WHERE product_height_cm IS NULL)
+        AS missing_height,
+    COUNT(*) FILTER (WHERE product_width_cm IS NULL)
+        AS missing_width
+FROM products;
